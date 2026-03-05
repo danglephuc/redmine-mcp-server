@@ -55,4 +55,3 @@ describe('createTranslationHelper', () => {
     expect(dumped.HELLO_KEY).toBeDefined();
   });
 });
-

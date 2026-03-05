@@ -44,8 +44,9 @@ describe('registerTools', () => {
     const [name, description, schema, handler] = registerOnce.mock.calls[0];
     expect(name).toBe('redmine_foo');
     expect(description).toBe('Foo tool');
-    expect(schema).toBe((toolsetGroup.toolsets[0].tools[0] as any).schema.shape);
+    expect(schema).toBe(
+      (toolsetGroup.toolsets[0].tools[0] as any).schema.shape
+    );
     expect(typeof handler).toBe('function');
   });
 });
-

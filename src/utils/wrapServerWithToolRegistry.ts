@@ -34,14 +34,16 @@ export function wrapServerWithToolRegistry(
       return;
     }
     s.__registeredToolNames!.add(name);
-    (s as McpServer & {
-      tool: (
-        name: string,
-        description: string,
-        schema: ZodRawShapeCompat,
-        handler: unknown
-      ) => void;
-    }).tool(name, description, schema, handler);
+    (
+      s as McpServer & {
+        tool: (
+          name: string,
+          description: string,
+          schema: ZodRawShapeCompat,
+          handler: unknown
+        ) => void;
+      }
+    ).tool(name, description, schema, handler);
   };
 
   return s;
