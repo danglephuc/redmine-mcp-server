@@ -8,7 +8,11 @@ export function wrapWithTokenLimit<I, T>(
   return async (input: I) => {
     const result = await fn(input);
 
-    if (result == null || typeof result !== 'object' || result.kind === 'error') {
+    if (
+      result == null ||
+      typeof result !== 'object' ||
+      result.kind === 'error'
+    ) {
       return result;
     }
 
@@ -29,4 +33,3 @@ export function wrapWithTokenLimit<I, T>(
     };
   };
 }
-

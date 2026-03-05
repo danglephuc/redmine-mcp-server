@@ -43,4 +43,3 @@ export function createTranslationHelper(options?: {
 
   return { t, dump };
 }
-

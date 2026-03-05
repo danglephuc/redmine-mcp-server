@@ -7,4 +7,3 @@ export function wrapWithErrorHandling<I, T>(
 ): (input: I) => Promise<SafeResult<T>> {
   return runToolSafely(fn, onError);
 }
-

@@ -15,4 +15,3 @@ export type SafeResult<T> = OkResult<T> | ErrorLike;
 export function isErrorLike<T>(value: SafeResult<T>): value is ErrorLike {
   return value.kind === 'error';
 }
-

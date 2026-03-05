@@ -82,4 +82,3 @@ main().catch((error) => {
   logger.error({ err: error }, 'Fatal error in main()');
   process.exit(1);
 });
-

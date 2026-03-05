@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
 import env from 'env-var';
+import { Buffer } from 'node:buffer';
+import { URL } from 'node:url';
 
 dotenv.config();
 
@@ -99,4 +101,3 @@ export class RedmineClient {
     return body as T;
   }
 }
-

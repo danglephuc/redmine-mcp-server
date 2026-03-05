@@ -9,4 +9,3 @@ export interface ToolDefinition {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: (input: any) => Promise<unknown>;
 }
-

@@ -10,4 +10,3 @@ export interface Toolset {
 export interface ToolsetGroup {
   toolsets: Toolset[];
 }
-

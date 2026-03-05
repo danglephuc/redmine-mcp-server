@@ -4,10 +4,7 @@ import { wrapWithToolResult } from '../transformers/wrapWithToolResult.js';
 import { MCPOptions } from '../../types/mcp.js';
 import { ToolDefinition } from '../../types/tool.js';
 
-export function composeToolHandler(
-  tool: ToolDefinition,
-  options: MCPOptions
-) {
+export function composeToolHandler(tool: ToolDefinition, options: MCPOptions) {
   const { maxTokens } = options;
 
   const handlerWithErrors = wrapWithErrorHandling(tool.handler);
@@ -15,4 +12,3 @@ export function composeToolHandler(
 
   return wrapWithToolResult(handlerWithLimit);
 }
-

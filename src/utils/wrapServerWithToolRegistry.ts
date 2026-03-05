@@ -13,7 +13,9 @@ export interface RedmineMCPServer extends McpServer {
   ) => void;
 }
 
-export function wrapServerWithToolRegistry(server: McpServer): RedmineMCPServer {
+export function wrapServerWithToolRegistry(
+  server: McpServer
+): RedmineMCPServer {
   const s = server as RedmineMCPServer;
 
   if (!s.__registeredToolNames) {
@@ -28,14 +30,19 @@ export function wrapServerWithToolRegistry(server: McpServer): RedmineMCPServer 
     handler: any
   ) => {
     if (s.__registeredToolNames!.has(name)) {
-      // eslint-disable-next-line no-console
       console.warn(`Skipping duplicate tool registration: ${name}`);
       return;
     }
     s.__registeredToolNames!.add(name);
-    (s as any).tool(name, description, schema, handler);
+    (s as McpServer & {
+      tool: (
+        name: string,
+        description: string,
+        schema: ZodRawShapeCompat,
+        handler: unknown
+      ) => void;
+    }).tool(name, description, schema, handler);
   };
 
   return s;
 }
-

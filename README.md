@@ -42,15 +42,15 @@ A read-only Model Context Protocol (MCP) server for querying Redmine issue data 
       "args": ["github:danglephuc/redmine-mcp-server"],
       "env": {
         "REDMINE_URL": "https://redmine.example.com",
-        "REDMINE_API_KEY": "your-api-key-here",        
+        "REDMINE_API_KEY": "your-api-key-here",
         // "REDMINE_USERNAME": "your-username",
         // "REDMINE_PASSWORD": "your-password",
         "MAX_TOKENS": "50000",
         "PREFIX": "redmine_",
-        "ENABLE_TOOLSETS": "issue,issue_metadata"
-      }
-    }
-  }
+        "ENABLE_TOOLSETS": "issue,issue_metadata",
+      },
+    },
+  },
 }
 ```
 
@@ -122,4 +122,3 @@ npm run typecheck
 ```
 
 You can extend this server with additional toolsets (projects, time entries, etc.) by following the same patterns used for the existing issue-focused tools.
-

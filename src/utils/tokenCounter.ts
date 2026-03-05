@@ -7,4 +7,3 @@ export function countTokens(text: string): number {
   const tokens = normalized.match(/\w+|[^\s\w]/g);
   return tokens ? tokens.length : 0;
 }
-

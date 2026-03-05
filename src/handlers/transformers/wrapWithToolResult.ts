@@ -10,7 +10,7 @@ export function wrapWithToolResult<I, T>(
   fn: (input: I) => Promise<SafeResult<T>>
 ): (
   input: I,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   extra: RequestHandlerExtra<ServerRequest, ServerNotification>
 ) => Promise<CallToolResult> {
   return async (input: I): Promise<CallToolResult> => {
@@ -51,4 +51,3 @@ export function wrapWithToolResult<I, T>(
     };
   };
 }
-

@@ -4,26 +4,16 @@ import { TranslationHelper } from '../../createTranslationHelper.js';
 import { RedmineClient } from '../../redmine/client.js';
 
 const getIssuesSchema = z.object({
-  projectId: z
-    .number()
-    .int()
-    .optional()
-    .describe('Filter by project ID'),
-  trackerId: z
-    .number()
-    .int()
-    .optional()
-    .describe('Filter by tracker ID'),
+  projectId: z.number().int().optional().describe('Filter by project ID'),
+  trackerId: z.number().int().optional().describe('Filter by tracker ID'),
   statusId: z
     .union([z.string(), z.number().int()])
     .optional()
-    .describe(
-      'Filter by status (id, or special values: open, closed, *)'
-    ),
+    .describe('Filter by status (id, or special values: open, closed, *)'),
   assignedToId: z
     .union([z.number().int(), z.literal('me')])
     .optional()
-    .describe('Filter by assignee ID, or \"me\" for current user'),
+    .describe('Filter by assignee ID, or "me" for current user'),
   offset: z
     .number()
     .int()
@@ -41,7 +31,7 @@ const getIssuesSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Sort expression, e.g. \"priority:desc,updated_on\" (Redmine sort syntax)'
+      'Sort expression, e.g. "priority:desc,updated_on" (Redmine sort syntax)'
     ),
 });
 
@@ -74,4 +64,3 @@ export function getIssuesTool(
     },
   };
 }
-

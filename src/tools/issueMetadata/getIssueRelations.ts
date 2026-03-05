@@ -4,7 +4,10 @@ import { TranslationHelper } from '../../createTranslationHelper.js';
 import { RedmineClient } from '../../redmine/client.js';
 
 const getIssueRelationsSchema = z.object({
-  issueId: z.number().int().describe('ID of the issue whose relations should be listed'),
+  issueId: z
+    .number()
+    .int()
+    .describe('ID of the issue whose relations should be listed'),
 });
 
 export function getIssueRelationsTool(
@@ -25,4 +28,3 @@ export function getIssueRelationsTool(
     },
   };
 }
-

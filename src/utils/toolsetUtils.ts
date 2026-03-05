@@ -1,6 +1,9 @@
 import { ToolsetGroup, Toolset } from '../types/toolsets.js';
 
-export function getToolset(group: ToolsetGroup, name: string): Toolset | undefined {
+export function getToolset(
+  group: ToolsetGroup,
+  name: string
+): Toolset | undefined {
   return group.toolsets.find((t) => t.name === name);
 }
 
@@ -22,7 +25,6 @@ export function buildToolsetGroup(
   );
 
   if (unknown.length > 0) {
-    // eslint-disable-next-line no-console
     console.warn(`Unknown toolsets: ${unknown.join(', ')}`);
   }
 
@@ -35,4 +37,3 @@ export function buildToolsetGroup(
     })),
   };
 }
-
