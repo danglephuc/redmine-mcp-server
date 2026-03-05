@@ -12,6 +12,7 @@ describe('registerTools', () => {
       toolsets: [
         {
           name: 'test',
+          description: 'test toolset',
           enabled: true,
           tools: [
             {
@@ -24,6 +25,7 @@ describe('registerTools', () => {
         },
         {
           name: 'disabled',
+          description: 'disabled toolset',
           enabled: false,
           tools: [
             {
