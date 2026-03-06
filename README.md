@@ -1,38 +1,48 @@
-## Redmine MCP Server
+# Redmine MCP Server
 
-A read-only Model Context Protocol (MCP) server for querying Redmine issue data via the Redmine REST API.
+A **read-only** [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for querying Redmine issue data via the Redmine REST API. Designed to integrate seamlessly with AI assistants (e.g., Claude, Cursor, GitHub Copilot) that support MCP.
 
-### Features
+## Features
 
-- **Read-only** access to Redmine:
-  - List issues with rich filters (`get_issues`)
-  - Get a single issue with associated data (`get_issue`)
-  - Query issue metadata:
-    - Trackers (`get_trackers`)
-    - Issue statuses (`get_issue_statuses`)
-    - Issue priorities (`get_issue_priorities`)
-    - Project issue categories (`get_issue_categories`)
-    - Issue relations (`get_issue_relations`)
-- **Authentication**:
-  - API key (`X-Redmine-API-Key`)
-  - HTTP Basic Auth (username/password)
-- **MCP integration**:
-  - Token limiting to avoid huge responses
-  - Toolsets (`issue`, `issue_metadata`)
+- 🔍 **Read-only access to Redmine** — list issues, get issue details, query metadata
+- 🔐 **Flexible authentication** — API key or HTTP Basic Auth (or both combined)
+- 📦 **Toolset system** — enable only the tools you need
+- 🔤 **Configurable tool prefix** — avoid naming conflicts across multiple MCP servers
+- 🪙 **Token limiting** — automatically truncates oversized responses to avoid context overflow
+- 🚀 **Zero local install** — run directly via `npx` without cloning the repo
 
----
+## Available Tools
+
+### Toolset: `issue`
+
+| Tool         | Description                             | Redmine Endpoint       |
+| ------------ | --------------------------------------- | ---------------------- |
+| `get_issues` | List issues with rich filters           | `GET /issues.json`     |
+| `get_issue`  | Get a single issue with associated data | `GET /issues/:id.json` |
+
+### Toolset: `issue_metadata`
+
+| Tool                   | Description                   | Redmine Endpoint                          |
+| ---------------------- | ----------------------------- | ----------------------------------------- |
+| `get_trackers`         | List all trackers             | `GET /trackers.json`                      |
+| `get_issue_statuses`   | List all issue statuses       | `GET /issue_statuses.json`                |
+| `get_issue_priorities` | List all issue priorities     | `GET /enumerations/issue_priorities.json` |
+| `get_issue_categories` | List categories for a project | `GET /projects/:id/issue_categories.json` |
+| `get_issue_relations`  | List relations for an issue   | `GET /issues/:id/relations.json`          |
+
+> Tools are prefixed with the value of `PREFIX` (e.g., `redmine_get_issues`). See [Configuration](docs/configuration.md) for details.
+
+## Quick Start
 
 ### Requirements
 
-- Node.js 20+ (for built-in `fetch` and ES modules)
-- A Redmine instance with REST API enabled
-- Either:
-  - A Redmine API key, or
-  - A username/password with sufficient permissions
+- Node.js 20+ (uses built-in `fetch` and ES modules)
+- A running Redmine instance with the REST API enabled
+- A valid API key **or** username/password credentials
 
----
+### Installation (via `npx`)
 
-### Installation & MCP configuration (using `npx`)
+Add this to your MCP client configuration (e.g., Claude Desktop, Cursor, etc.):
 
 ```jsonc
 {
@@ -54,71 +64,30 @@ A read-only Model Context Protocol (MCP) server for querying Redmine issue data 
 }
 ```
 
----
+> See [Configuration](docs/configuration.md) for all available environment variables and CLI flags.
 
-### Available Toolsets and Tools
+## Documentation
 
-#### Toolset: `issue`
+| Document                               | Description                                            |
+| -------------------------------------- | ------------------------------------------------------ |
+| [Configuration](docs/configuration.md) | All environment variables, CLI flags, and auth options |
+| [Tools Reference](docs/tools.md)       | Detailed parameters and examples for every tool        |
+| [Architecture](docs/architecture.md)   | Project structure, key modules, and extension guide    |
+| [Development](docs/development.md)     | How to run, build, test, and extend this project       |
 
-- **`get_issues`**
-  - **Description**: Returns a list of issues.
-  - **Redmine endpoint**: `GET /issues.json`
-  - **Parameters (subset)**:
-    - `projectId` (number) – filter by project ID
-    - `trackerId` (number) – filter by tracker ID
-    - `statusId` (number or string) – status ID or special values `open`, `closed`, `*`
-    - `assignedToId` (number or `"me"`) – assignee filter
-    - `offset` (number) – pagination offset
-    - `limit` (number) – pagination limit (1–100)
-    - `sort` (string) – Redmine sort expression, e.g. `"priority:desc,updated_on"`
-
-- **`get_issue`**
-  - **Description**: Returns detailed information about a single issue.
-  - **Redmine endpoint**: `GET /issues/:id.json`
-  - **Parameters**:
-    - `id` (number) – issue ID
-    - `include` (string, optional) – comma-separated list of associations (`attachments,relations,changesets,journals,watchers,allowed_statuses`, etc.)
-
-#### Toolset: `issue_metadata`
-
-- **`get_trackers`**
-  - `GET /trackers.json`
-- **`get_issue_statuses`**
-  - `GET /issue_statuses.json`
-- **`get_issue_priorities`**
-  - `GET /enumerations/issue_priorities.json`
-- **`get_issue_categories`**
-  - `GET /projects/:project_id/issue_categories.json`
-  - Parameters: `projectId` (number)
-- **`get_issue_relations`**
-  - `GET /issues/:issue_id/relations.json`
-  - Parameters: `issueId` (number)
-
----
-
-### Environment Variables
-
-- **Required**
-  - `REDMINE_URL` – base URL of your Redmine instance (no trailing slash)
-- **Auth**
-  - `REDMINE_API_KEY` (optional)
-  - `REDMINE_USERNAME` and `REDMINE_PASSWORD` (optional)
-
-  You must set at least one auth method (API key or basic auth). If **both** are set, the server sends **both** `X-Redmine-API-Key` and `Authorization: Basic ...` headers on each request, which matches setups where Redmine is behind additional HTTP auth.
-
-- **Optional**
-  - `MAX_TOKENS` – maximum tokens for responses (default `50000`)
-  - `PREFIX` – prefix for tool names (e.g. `redmine_`)
-  - `ENABLE_TOOLSETS` – comma-separated list of toolsets to enable (`issue`, `issue_metadata`, or `all`)
-
----
-
-### Development
+## Development
 
 ```bash
-npm run dev      # run with tsx
-npm run build    # type-check and emit to build/
-npm run typecheck
+npm install
+npm run dev          # run with tsx (hot reload)
+npm run inspect      # launch MCP Inspector UI at http://localhost:6274
+npm run build        # type-check and compile to build/
+npm run test         # run all tests with vitest
+npm run test:coverage  # run tests with coverage
+npm run lint         # lint with eslint
+npm run format       # check formatting with prettier
 ```
 
-You can extend this server with additional toolsets (projects, time entries, etc.) by following the same patterns used for the existing issue-focused tools.
+## License
+
+MIT

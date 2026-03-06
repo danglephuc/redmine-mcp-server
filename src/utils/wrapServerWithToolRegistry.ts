@@ -30,7 +30,7 @@ export function wrapServerWithToolRegistry(
     handler: any
   ) => {
     if (s.__registeredToolNames!.has(name)) {
-      console.warn(`Skipping duplicate tool registration: ${name}`);
+      console.error(`Skipping duplicate tool registration: ${name}`);
       return;
     }
     s.__registeredToolNames!.add(name);
