@@ -130,6 +130,8 @@ export class RedmineClient {
   /**
    * Streams the binary content at the given URL directly to a file on disk.
    * Creates intermediate directories as needed.
+   * Uses a streaming pipeline when the response body is available to avoid
+   * loading the entire file into memory.
    */
   async downloadAttachmentToFile(
     contentUrl: string,
@@ -144,12 +146,24 @@ export class RedmineClient {
       throw new RedmineApiError(res.status, await res.text());
     }
 
-    const arrayBuffer = await res.arrayBuffer();
-
     // Ensure the target directory exists.
-    const { mkdir } = await import('node:fs/promises');
+    const { mkdir, open } = await import('node:fs/promises');
     await mkdir(path.dirname(outputPath), { recursive: true });
 
-    await writeFile(outputPath, Buffer.from(arrayBuffer));
+    if (res.body) {
+      const { pipeline } = await import('node:stream/promises');
+      const { Readable } = await import('node:stream');
+      const fileHandle = await open(outputPath, 'w');
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await pipeline(Readable.fromWeb(res.body as any), fileHandle.createWriteStream());
+      } finally {
+        await fileHandle.close();
+      }
+    } else {
+      // Fallback: buffer the whole response when streaming is unavailable.
+      const arrayBuffer = await res.arrayBuffer();
+      await writeFile(outputPath, Buffer.from(arrayBuffer));
+    }
   }
 }
