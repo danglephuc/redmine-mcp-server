@@ -74,6 +74,52 @@ Get basic info for issue #999
 
 ---
 
+### `get_attachments`
+
+Returns a list of attachments (images, files, etc.) for a specific Redmine issue.
+
+**Redmine endpoint:** `GET /issues/:id.json` (with `include=attachments`)
+
+#### Parameters
+
+| Parameter | Type   | Required | Description          |
+| --------- | ------ | -------- | -------------------- |
+| `issueId` | number | **Yes**  | The Redmine issue ID |
+
+#### Example Usage
+
+```
+Get all attachments for issue #1234
+→ get_attachments(issueId=1234)
+```
+
+---
+
+### `download_attachment`
+
+Downloads a specific attachment file from a Redmine issue. Use `get_attachments` first to obtain the attachment ID. By default returns the file as base64-encoded content. If `outputPath` is provided, streams the file directly to disk (recommended for large files) and returns a success confirmation instead.
+
+**Redmine endpoint:** `GET /attachments/:id.json`
+
+#### Parameters
+
+| Parameter      | Type   | Required | Description                                                                                                       |
+| -------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `attachmentId` | number | **Yes**  | The ID of the attachment to download                                                                              |
+| `outputPath`   | string | No       | Absolute file path to save the attachment to disk. When provided, the file is streamed to disk instead of base64. |
+
+#### Example Usage
+
+```
+Download attachment 107092 as base64
+→ download_attachment(attachmentId=107092)
+
+Save attachment 107092 to disk
+→ download_attachment(attachmentId=107092, outputPath="/tmp/screenshot.png")
+```
+
+---
+
 ## Toolset: `issue_metadata`
 
 ### `get_trackers`

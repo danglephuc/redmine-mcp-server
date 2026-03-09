@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import env from 'env-var';
 import { Buffer } from 'node:buffer';
 import { URL } from 'node:url';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 dotenv.config();
 
@@ -99,5 +101,55 @@ export class RedmineClient {
     }
 
     return body as T;
+  }
+
+  /**
+   * Downloads the binary content at the given URL and returns it as a
+   * base64-encoded string together with the content type.
+   */
+  async getAttachmentBuffer(
+    contentUrl: string
+  ): Promise<{ base64: string; mimeType: string }> {
+    const res = await fetch(contentUrl, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new RedmineApiError(res.status, await res.text());
+    }
+
+    const mimeType =
+      res.headers.get('content-type') || 'application/octet-stream';
+    const arrayBuffer = await res.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    return { base64, mimeType };
+  }
+
+  /**
+   * Streams the binary content at the given URL directly to a file on disk.
+   * Creates intermediate directories as needed.
+   */
+  async downloadAttachmentToFile(
+    contentUrl: string,
+    outputPath: string
+  ): Promise<void> {
+    const res = await fetch(contentUrl, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new RedmineApiError(res.status, await res.text());
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+
+    // Ensure the target directory exists.
+    const { mkdir } = await import('node:fs/promises');
+    await mkdir(path.dirname(outputPath), { recursive: true });
+
+    await writeFile(outputPath, Buffer.from(arrayBuffer));
   }
 }
