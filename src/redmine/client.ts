@@ -156,7 +156,10 @@ export class RedmineClient {
       const fileHandle = await open(outputPath, 'w');
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await pipeline(Readable.fromWeb(res.body as any), fileHandle.createWriteStream());
+        await pipeline(
+          Readable.fromWeb(res.body as any),
+          fileHandle.createWriteStream()
+        );
       } finally {
         await fileHandle.close();
       }

@@ -85,9 +85,14 @@ export function downloadAttachmentTool(
           throw new Error(
             `File already exists at ${resolvedPath}. Remove it first or choose a different path.`
           );
-        } catch (err) {
+        } catch (err: unknown) {
           // access() throws when the file does not exist — that is the expected case.
-          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          if (
+            typeof err === 'object' &&
+            err !== null &&
+            'code' in err &&
+            (err as { code: string }).code !== 'ENOENT'
+          ) {
             throw err;
           }
         }

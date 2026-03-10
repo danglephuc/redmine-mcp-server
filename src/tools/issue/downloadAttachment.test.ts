@@ -99,7 +99,9 @@ describe('downloadAttachmentTool', () => {
         filesize: 11 * 1024 * 1024, // 11 MB
       },
     };
-    (mockClient.get as ReturnType<typeof vi.fn>).mockResolvedValue(largeMetadata);
+    (mockClient.get as ReturnType<typeof vi.fn>).mockResolvedValue(
+      largeMetadata
+    );
 
     await expect(tool.handler({ attachmentId: 101 })).rejects.toThrow(
       /too large.*outputPath/i

@@ -103,9 +103,9 @@ Downloads a specific attachment file from a Redmine issue. Use `get_attachments`
 
 #### Parameters
 
-| Parameter      | Type   | Required | Description                                                                                                                                                   |
-| -------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `attachmentId` | number | **Yes**  | The ID of the attachment to download                                                                                                                          |
+| Parameter      | Type   | Required | Description                                                                                                                                                                                                         |
+| -------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attachmentId` | number | **Yes**  | The ID of the attachment to download                                                                                                                                                                                |
 | `outputPath`   | string | No       | Absolute file path to save the attachment to disk. When provided, the file is streamed directly to disk instead of being returned as base64. Required for files larger than 10 MB. The file must not already exist. |
 
 #### Example Usage
