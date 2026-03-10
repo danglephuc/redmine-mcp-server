@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import env from 'env-var';
 import { Buffer } from 'node:buffer';
 import { URL } from 'node:url';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 dotenv.config();
 
@@ -99,5 +101,72 @@ export class RedmineClient {
     }
 
     return body as T;
+  }
+
+  /**
+   * Downloads the binary content at the given URL and returns it as a
+   * base64-encoded string together with the content type.
+   */
+  async getAttachmentBuffer(
+    contentUrl: string
+  ): Promise<{ base64: string; mimeType: string }> {
+    const res = await fetch(contentUrl, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new RedmineApiError(res.status, await res.text());
+    }
+
+    const mimeType =
+      res.headers.get('content-type') || 'application/octet-stream';
+    const arrayBuffer = await res.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    return { base64, mimeType };
+  }
+
+  /**
+   * Streams the binary content at the given URL directly to a file on disk.
+   * Creates intermediate directories as needed.
+   * Uses a streaming pipeline when the response body is available to avoid
+   * loading the entire file into memory.
+   */
+  async downloadAttachmentToFile(
+    contentUrl: string,
+    outputPath: string
+  ): Promise<void> {
+    const res = await fetch(contentUrl, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new RedmineApiError(res.status, await res.text());
+    }
+
+    // Ensure the target directory exists.
+    const { mkdir, open } = await import('node:fs/promises');
+    await mkdir(path.dirname(outputPath), { recursive: true });
+
+    if (res.body) {
+      const { pipeline } = await import('node:stream/promises');
+      const { Readable } = await import('node:stream');
+      const fileHandle = await open(outputPath, 'w');
+      try {
+        await pipeline(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          Readable.fromWeb(res.body as any),
+          fileHandle.createWriteStream()
+        );
+      } finally {
+        await fileHandle.close();
+      }
+    } else {
+      // Fallback: buffer the whole response when streaming is unavailable.
+      const arrayBuffer = await res.arrayBuffer();
+      await writeFile(outputPath, Buffer.from(arrayBuffer));
+    }
   }
 }
