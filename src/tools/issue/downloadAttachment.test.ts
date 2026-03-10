@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { downloadAttachmentTool } from './downloadAttachment.js';
 import { createTranslationHelper } from '../../createTranslationHelper.js';
 import type { RedmineClient } from '../../redmine/client.js';
+import * as fsp from 'node:fs/promises';
+
+// Mock node:fs/promises so the overwrite-protection check does not touch the real FS.
+vi.mock('node:fs/promises', () => ({
+  access: vi.fn(),
+}));
 
 const mockAttachmentMetadata = {
   attachment: {
@@ -49,6 +55,14 @@ describe('downloadAttachmentTool', () => {
     (
       mockClient.downloadAttachmentToFile as ReturnType<typeof vi.fn>
     ).mockResolvedValue(undefined);
+
+    // Default: file does not exist (access throws ENOENT).
+    vi.mocked(fsp.access).mockRejectedValue(
+      Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    );
+
+    // Clear REDMINE_DOWNLOAD_DIR between tests.
+    delete process.env.REDMINE_DOWNLOAD_DIR;
   });
 
   it('has the correct tool name and description', () => {
@@ -78,6 +92,21 @@ describe('downloadAttachmentTool', () => {
     });
   });
 
+  it('throws an error when attachment exceeds the 10 MB base64 limit', async () => {
+    const largeMetadata = {
+      attachment: {
+        ...mockAttachmentMetadata.attachment,
+        filesize: 11 * 1024 * 1024, // 11 MB
+      },
+    };
+    (mockClient.get as ReturnType<typeof vi.fn>).mockResolvedValue(largeMetadata);
+
+    await expect(tool.handler({ attachmentId: 101 })).rejects.toThrow(
+      /too large.*outputPath/i
+    );
+    expect(mockClient.getAttachmentBuffer).not.toHaveBeenCalled();
+  });
+
   it('saves to disk when outputPath is provided', async () => {
     const result = await tool.handler({
       attachmentId: 101,
@@ -101,5 +130,42 @@ describe('downloadAttachmentTool', () => {
     });
 
     expect(mockClient.getAttachmentBuffer).not.toHaveBeenCalled();
+  });
+
+  it('throws an error when the target file already exists', async () => {
+    // Simulate an existing file: access() resolves without throwing.
+    vi.mocked(fsp.access).mockResolvedValue(undefined);
+
+    await expect(
+      tool.handler({ attachmentId: 101, outputPath: '/tmp/screenshot.png' })
+    ).rejects.toThrow(/already exists/i);
+    expect(mockClient.downloadAttachmentToFile).not.toHaveBeenCalled();
+  });
+
+  it('throws an error when outputPath is outside REDMINE_DOWNLOAD_DIR', async () => {
+    process.env.REDMINE_DOWNLOAD_DIR = '/safe/downloads';
+
+    await expect(
+      tool.handler({ attachmentId: 101, outputPath: '/tmp/screenshot.png' })
+    ).rejects.toThrow(/allowed download directory/i);
+    expect(mockClient.downloadAttachmentToFile).not.toHaveBeenCalled();
+  });
+
+  it('allows outputPath within REDMINE_DOWNLOAD_DIR', async () => {
+    process.env.REDMINE_DOWNLOAD_DIR = '/safe/downloads';
+
+    const result = await tool.handler({
+      attachmentId: 101,
+      outputPath: '/safe/downloads/screenshot.png',
+    });
+
+    expect(mockClient.downloadAttachmentToFile).toHaveBeenCalledWith(
+      'https://redmine.example.com/attachments/download/101/screenshot.png',
+      '/safe/downloads/screenshot.png'
+    );
+    expect(result).toEqual({
+      success: true,
+      savedTo: '/safe/downloads/screenshot.png',
+    });
   });
 });

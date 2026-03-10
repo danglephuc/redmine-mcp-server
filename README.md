@@ -20,7 +20,7 @@ A **read-only** [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 | `get_issues`          | List issues with rich filters                   | `GET /issues.json`          |
 | `get_issue`           | Get a single issue with associated data         | `GET /issues/:id.json`      |
 | `get_attachments`     | List attachments for an issue                   | `GET /issues/:id.json`      |
-| `download_attachment` | Download an attachment (base64 or save to disk) | `GET /attachments/:id.json` |
+| `download_attachment` | Download an attachment as base64 (≤ 10 MB) or stream to disk via `outputPath` | `GET /attachments/:id.json` |
 
 ### Toolset: `issue_metadata`
 

@@ -20,7 +20,7 @@ export function allTools(
       {
         name: 'issue',
         description:
-          'Tools for querying Redmine issues (list and single issue).',
+          'Tools for querying Redmine issues and attachments (list/single issues, list/download attachments).',
         enabled: false,
         tools: [
           getIssuesTool(client, helper),

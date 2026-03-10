@@ -97,16 +97,16 @@ Get all attachments for issue #1234
 
 ### `download_attachment`
 
-Downloads a specific attachment file from a Redmine issue. Use `get_attachments` first to obtain the attachment ID. By default returns the file as base64-encoded content. If `outputPath` is provided, streams the file directly to disk (recommended for large files) and returns a success confirmation instead.
+Downloads a specific attachment file from a Redmine issue. Use `get_attachments` first to obtain the attachment ID. By default returns the file as base64-encoded content (limited to 10 MB). If `outputPath` is provided, the file is streamed directly to disk and the tool returns a success confirmation instead of base64 content. Files larger than 10 MB require `outputPath`. If `REDMINE_DOWNLOAD_DIR` is set in the environment, all `outputPath` values must reside within that directory.
 
 **Redmine endpoint:** `GET /attachments/:id.json`
 
 #### Parameters
 
-| Parameter      | Type   | Required | Description                                                                                                       |
-| -------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------- |
-| `attachmentId` | number | **Yes**  | The ID of the attachment to download                                                                              |
-| `outputPath`   | string | No       | Absolute file path to save the attachment to disk. When provided, the file is streamed to disk instead of base64. |
+| Parameter      | Type   | Required | Description                                                                                                                                                   |
+| -------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attachmentId` | number | **Yes**  | The ID of the attachment to download                                                                                                                          |
+| `outputPath`   | string | No       | Absolute file path to save the attachment to disk. When provided, the file is streamed directly to disk instead of being returned as base64. Required for files larger than 10 MB. The file must not already exist. |
 
 #### Example Usage
 
