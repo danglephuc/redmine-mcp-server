@@ -30,7 +30,28 @@ export function getIssueTool(
       const params: Record<string, string> = {};
       if (input.include) params.include = input.include;
 
-      return client.get(`/issues/${input.id}.json`, params);
+      const result = await client.get<{
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        issue?: { journals?: Array<Record<string, any>> };
+      }>(`/issues/${input.id}.json`, params);
+
+      const issue = result?.issue;
+
+      if (issue?.journals) {
+        issue.journals = issue.journals.map((journal, index) => {
+          const cloned = {
+            ...journal,
+            order: index + 1,
+          } as { [key: string]: unknown };
+
+          delete cloned.details;
+          delete cloned.private_notes;
+
+          return cloned;
+        });
+      }
+
+      return result;
     },
   };
 }
