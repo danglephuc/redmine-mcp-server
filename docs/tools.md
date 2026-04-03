@@ -97,16 +97,16 @@ Get all attachments for issue #1234
 
 ### `download_attachment`
 
-Downloads a specific attachment file from a Redmine issue. Use `get_attachments` first to obtain the attachment ID. By default returns the file as base64-encoded content (limited to 10 MB). If `outputPath` is provided, the file is streamed directly to disk and the tool returns a success confirmation instead of base64 content. Files larger than 10 MB require `outputPath`. If `REDMINE_DOWNLOAD_DIR` is set in the environment, all `outputPath` values must reside within that directory.
+Downloads a specific attachment file from a Redmine issue, or multiple attachments at once. Use `get_attachments` first to obtain the attachment ID. By default returns the file as base64-encoded content (limited to 10 MB). If `outputPath` is provided, the file is streamed directly to disk and the tool returns a success confirmation instead of base64 content. For multiple attachments, `outputPath` is required and should be a directory path where files will be saved using their original filenames. Files larger than 10 MB require `outputPath`. If `REDMINE_DOWNLOAD_DIR` is set in the environment, all `outputPath` values must reside within that directory.
 
 **Redmine endpoint:** `GET /attachments/:id.json`
 
 #### Parameters
 
-| Parameter      | Type   | Required | Description                                                                                                                                                                                                         |
-| -------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `attachmentId` | number | **Yes**  | The ID of the attachment to download                                                                                                                                                                                |
-| `outputPath`   | string | No       | Absolute file path to save the attachment to disk. When provided, the file is streamed directly to disk instead of being returned as base64. Required for files larger than 10 MB. The file must not already exist. |
+| Parameter      | Type               | Required | Description                                                                                                                                                                                                                                                                                     |
+| -------------- | ------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attachmentId` | number \| number[] | **Yes**  | The ID of the attachment to download, or an array of attachment IDs for batch download.                                                                                                                                                                                                         |
+| `outputPath`   | string             | No       | For single attachment: absolute file path to save the attachment. For multiple attachments: directory path where files will be saved using their original filenames. When provided, files are streamed directly to disk. Required for files larger than 10 MB. The file must not already exist. |
 
 #### Example Usage
 
@@ -116,6 +116,9 @@ Download attachment 107092 as base64
 
 Save attachment 107092 to disk
 → download_attachment(attachmentId=107092, outputPath="/tmp/screenshot.png")
+
+Download multiple attachments to a directory
+→ download_attachment(attachmentId=[107092, 107093], outputPath="/tmp/downloads")
 ```
 
 ---

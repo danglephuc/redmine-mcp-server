@@ -12,9 +12,10 @@ const MAX_BASE64_FILESIZE = 10 * 1024 * 1024; // 10 MB
 
 const downloadAttachmentSchema = z.object({
   attachmentId: z
-    .number()
-    .int()
-    .describe('The ID of the attachment to download'),
+    .union([z.number().int(), z.array(z.number().int())])
+    .describe(
+      'The ID of the attachment to download, or an array of attachment IDs for batch download.'
+    ),
   outputPath: z
     .string()
     .refine(path.isAbsolute, {
@@ -22,7 +23,7 @@ const downloadAttachmentSchema = z.object({
     })
     .optional()
     .describe(
-      'Absolute file path to save the attachment to disk. When provided, the file is streamed directly to disk instead of being returned as base64. Files larger than 10 MB require this option.'
+      'For single attachment: absolute file path to save the attachment. For multiple attachments: directory path where files will be saved using their original filenames. When provided, files are streamed directly to disk instead of being returned as base64. Files larger than 10 MB require this option.'
     ),
 });
 
@@ -47,85 +48,111 @@ export function downloadAttachmentTool(
     name: 'download_attachment',
     description: t(
       'TOOL_DOWNLOAD_ATTACHMENT_DESCRIPTION',
-      'Downloads a specific attachment file from a Redmine issue. Use get_attachments first to obtain the attachment ID. By default returns the file as base64-encoded content (limited to 10 MB). If outputPath is provided, streams the file directly to disk and returns a success confirmation instead.'
+      'Downloads one or more attachment files from a Redmine issue. Use get_attachments first to obtain attachment IDs. By default returns the file as base64-encoded content (limited to 10 MB). If outputPath is provided, streams the file directly to disk. For multiple attachments, outputPath is required and treated as a directory where files are saved using their original filenames.'
     ),
     schema: downloadAttachmentSchema as unknown as z.ZodObject<z.ZodRawShape>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handler: async (rawInput: any) => {
       const input = rawInput as z.infer<typeof downloadAttachmentSchema>;
 
-      // Fetch attachment metadata to get the content URL and filename.
-      const metadata = await client.get<RedmineAttachmentMetadata>(
-        `/attachments/${input.attachmentId}.json`
-      );
+      const ids = Array.isArray(input.attachmentId)
+        ? input.attachmentId
+        : [input.attachmentId];
 
-      const { attachment } = metadata;
+      const results: Array<{
+        id: number;
+        filename: string;
+        success: boolean;
+        savedTo?: string;
+        error?: string;
+      }> = [];
 
-      // If an output path is provided, validate it and stream directly to disk.
-      if (input.outputPath) {
-        // Normalize the path to remove any `..` traversal components.
-        const resolvedPath = path.resolve(input.outputPath);
+      for (const id of ids) {
+        // Fetch attachment metadata to get the content URL and filename.
+        const metadata = await client.get<RedmineAttachmentMetadata>(
+          `/attachments/${id}.json`
+        );
 
-        // If REDMINE_DOWNLOAD_DIR is configured, restrict writes to that directory.
-        const downloadDir = process.env.REDMINE_DOWNLOAD_DIR;
-        if (downloadDir) {
-          const resolvedDownloadDir = path.resolve(downloadDir);
-          const relative = path.relative(resolvedDownloadDir, resolvedPath);
-          if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        const { attachment } = metadata;
+
+        // If an output path is provided, validate it and stream directly to disk.
+        if (input.outputPath) {
+          // Normalize the path to remove any `..` traversal components.
+          const resolvedOutputPath = path.resolve(input.outputPath);
+          const isMultiple = ids.length > 1;
+
+          // Determine the target path: for multiple downloads, treat outputPath as a directory.
+          const targetPath = isMultiple
+            ? path.join(resolvedOutputPath, attachment.filename)
+            : resolvedOutputPath;
+
+          // If REDMINE_DOWNLOAD_DIR is configured, restrict writes to that directory.
+          const downloadDir = process.env.REDMINE_DOWNLOAD_DIR;
+          if (downloadDir) {
+            const resolvedDownloadDir = path.resolve(downloadDir);
+            const relative = path.relative(resolvedDownloadDir, targetPath);
+            if (relative.startsWith('..') || path.isAbsolute(relative)) {
+              throw new Error(
+                `outputPath must be within the allowed download directory: ${resolvedDownloadDir}`
+              );
+            }
+          }
+
+          await client.downloadAttachmentToFile(
+            attachment.content_url,
+            targetPath
+          );
+
+          results.push({
+            id: attachment.id,
+            filename: attachment.filename,
+            success: true,
+            savedTo: targetPath,
+          });
+        } else {
+          // Base64 inline mode (only supported for single attachment).
+          if (ids.length > 1) {
             throw new Error(
-              `outputPath must be within the allowed download directory: ${resolvedDownloadDir}`
+              'outputPath is required when downloading multiple attachments. ' +
+                'Please provide a directory path where files will be saved.'
             );
           }
-        }
 
-        // Refuse to overwrite existing files.
-        const { access } = await import('node:fs/promises');
-        try {
-          await access(resolvedPath);
-          throw new Error(
-            `File already exists at ${resolvedPath}. Remove it first or choose a different path.`
-          );
-        } catch (err: unknown) {
-          // access() throws when the file does not exist — that is the expected case.
-          if (
-            typeof err === 'object' &&
-            err !== null &&
-            'code' in err &&
-            (err as { code: string }).code !== 'ENOENT'
-          ) {
-            throw err;
+          // Reject base64 mode for files that exceed the size limit.
+          if (attachment.filesize > MAX_BASE64_FILESIZE) {
+            throw new Error(
+              `Attachment is too large (${attachment.filesize} bytes) to return as base64 inline. ` +
+                `Please provide an outputPath to stream the file to disk instead.`
+            );
           }
+
+          // Download the binary content.
+          const { base64, mimeType } = await client.getAttachmentBuffer(
+            attachment.content_url
+          );
+
+          results.push({
+            id: attachment.id,
+            filename: attachment.filename,
+            success: true,
+            savedTo: undefined,
+          });
+
+          return {
+            id: attachment.id,
+            filename: attachment.filename,
+            mimeType,
+            filesize: attachment.filesize,
+            base64Content: base64,
+          };
         }
-
-        await client.downloadAttachmentToFile(
-          attachment.content_url,
-          resolvedPath
-        );
-        return {
-          success: true,
-          savedTo: resolvedPath,
-        };
       }
 
-      // Reject base64 mode for files that exceed the size limit.
-      if (attachment.filesize > MAX_BASE64_FILESIZE) {
-        throw new Error(
-          `Attachment is too large (${attachment.filesize} bytes) to return as base64 inline. ` +
-            `Please provide an outputPath to stream the file to disk instead.`
-        );
-      }
-
-      // Download the binary content.
-      const { base64, mimeType } = await client.getAttachmentBuffer(
-        attachment.content_url
-      );
-
+      // Return batch results for multiple downloads.
       return {
-        id: attachment.id,
-        filename: attachment.filename,
-        mimeType,
-        filesize: attachment.filesize,
-        base64Content: base64,
+        results,
+        savedCount: results.filter((r) => r.success).length,
+        failedCount: results.filter((r) => !r.success).length,
       };
     },
   };

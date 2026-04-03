@@ -119,9 +119,17 @@ describe('downloadAttachmentTool', () => {
       'https://redmine.example.com/attachments/download/101/screenshot.png',
       '/tmp/screenshot.png'
     );
-    expect(result).toEqual({
-      success: true,
-      savedTo: '/tmp/screenshot.png',
+    expect(result).toMatchObject({
+      results: [
+        {
+          id: 101,
+          filename: 'screenshot.png',
+          success: true,
+          savedTo: '/tmp/screenshot.png',
+        },
+      ],
+      savedCount: 1,
+      failedCount: 0,
     });
   });
 
@@ -134,14 +142,28 @@ describe('downloadAttachmentTool', () => {
     expect(mockClient.getAttachmentBuffer).not.toHaveBeenCalled();
   });
 
-  it('throws an error when the target file already exists', async () => {
+  it('proceeds when the target file already exists', async () => {
     // Simulate an existing file: access() resolves without throwing.
     vi.mocked(fsp.access).mockResolvedValue(undefined);
 
-    await expect(
-      tool.handler({ attachmentId: 101, outputPath: '/tmp/screenshot.png' })
-    ).rejects.toThrow(/already exists/i);
-    expect(mockClient.downloadAttachmentToFile).not.toHaveBeenCalled();
+    const result = await tool.handler({
+      attachmentId: 101,
+      outputPath: '/tmp/screenshot.png',
+    });
+
+    expect(mockClient.downloadAttachmentToFile).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      results: [
+        {
+          id: 101,
+          filename: 'screenshot.png',
+          success: true,
+          savedTo: '/tmp/screenshot.png',
+        },
+      ],
+      savedCount: 1,
+      failedCount: 0,
+    });
   });
 
   it('throws an error when outputPath is outside REDMINE_DOWNLOAD_DIR', async () => {
@@ -165,9 +187,92 @@ describe('downloadAttachmentTool', () => {
       'https://redmine.example.com/attachments/download/101/screenshot.png',
       '/safe/downloads/screenshot.png'
     );
+    expect(result).toMatchObject({
+      results: [
+        {
+          id: 101,
+          filename: 'screenshot.png',
+          success: true,
+          savedTo: '/safe/downloads/screenshot.png',
+        },
+      ],
+      savedCount: 1,
+      failedCount: 0,
+    });
+  });
+
+  it('supports downloading multiple attachments to a directory', async () => {
+    const mockMetadata2 = {
+      attachment: {
+        id: 102,
+        filename: 'report.pdf',
+        filesize: 67890,
+        content_type: 'application/pdf',
+        content_url:
+          'https://redmine.example.com/attachments/download/102/report.pdf',
+        description: 'A report',
+        author: { id: 2, name: 'Bob' },
+        created_on: '2025-06-02T10:00:00Z',
+      },
+    };
+
+    (mockClient.get as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(mockAttachmentMetadata)
+      .mockResolvedValueOnce(mockMetadata2);
+
+    const result = await tool.handler({
+      attachmentId: [101, 102],
+      outputPath: '/tmp/downloads',
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith('/attachments/101.json');
+    expect(mockClient.get).toHaveBeenCalledWith('/attachments/102.json');
+    expect(mockClient.downloadAttachmentToFile).toHaveBeenCalledWith(
+      'https://redmine.example.com/attachments/download/101/screenshot.png',
+      '/tmp/downloads/screenshot.png'
+    );
+    expect(mockClient.downloadAttachmentToFile).toHaveBeenCalledWith(
+      'https://redmine.example.com/attachments/download/102/report.pdf',
+      '/tmp/downloads/report.pdf'
+    );
+    expect(result).toMatchObject({
+      results: [
+        {
+          id: 101,
+          filename: 'screenshot.png',
+          success: true,
+          savedTo: '/tmp/downloads/screenshot.png',
+        },
+        {
+          id: 102,
+          filename: 'report.pdf',
+          success: true,
+          savedTo: '/tmp/downloads/report.pdf',
+        },
+      ],
+      savedCount: 2,
+      failedCount: 0,
+    });
+  });
+
+  it('throws error for multiple attachments without outputPath', async () => {
+    await expect(tool.handler({ attachmentId: [101, 102] })).rejects.toThrow(
+      /outputPath is required.*multiple attachments/i
+    );
+  });
+
+  it('returns base64 for single attachment without outputPath', async () => {
+    const result = await tool.handler({ attachmentId: 101 });
+
+    expect(mockClient.getAttachmentBuffer).toHaveBeenCalledWith(
+      'https://redmine.example.com/attachments/download/101/screenshot.png'
+    );
     expect(result).toEqual({
-      success: true,
-      savedTo: '/safe/downloads/screenshot.png',
+      id: 101,
+      filename: 'screenshot.png',
+      mimeType: 'image/png',
+      filesize: 12345,
+      base64Content: 'aGVsbG8=',
     });
   });
 });
